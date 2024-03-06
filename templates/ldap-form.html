@@ -37,25 +37,8 @@
         </div>
 
         <div class="form-group">
-            <label for="date_of_birth">Date of Birth:</label>
+            <label for="date_of_birth">Date of Birth (In ID code is xYYDDMMxxxx):</label>
             <input type="date" class="form-control" id="date_of_birth" name="date_of_birth">
-        </div>
-
-        <div class="form-group">
-            <label for="place_of_birth">Place of Birth:</label>
-            <select class="form-control" id="place_of_birth" name="place_of_birth">
-                <option value="option1">Option 1</option>
-                <!-- Add more options here -->
-                <option value="option8">Option 8</option>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label for="hospital_of_birth">Hospital of Birth:</label>
-            <select class="form-control" id="hospital_of_birth" name="hospital_of_birth">
-                <option value="hospital1">Hospital 1</option>
-                <!-- Add more options here -->
-            </select>
         </div>
 
         <div class="form-group">
@@ -68,8 +51,13 @@
         </div>
 
         <div class="form-group">
-            <label for="id_code">ID Code (Last 4 Digits):</label>
-            <input type="text" class="form-control" id="id_code" name="id_code" maxlength="4">
+            <label for="serial">ID Code Serial Number (the 3 xxxxxxx???x Digits):</label>
+            <input type="text" class="form-control" id="serial" name="serial" maxlength="3">
+        </div>
+
+        <div class="form-group">
+            <label for="control_code">ID Control Code (the last xxxxxxxxxx? Digit):</label>
+            <input type="text" class="form-control" id="control_code" name="control_code" maxlength="3">
         </div>
 
         <button type="submit" class="btn btn-primary" name="action" value="start_search">Start Search</button>
