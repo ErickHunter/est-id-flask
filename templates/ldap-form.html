@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LDAP Search Form</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Optional Custom CSS -->
+    <style>
+        body {
+            padding-top: 20px;
+        }
+        .form-container {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container form-container">
+    <h2 class="mb-4">LDAP Search Form</h2>
+    <form action="/search" method="post">
+        <div class="form-group">
+            <label for="first_name">First Name:</label>
+            <input type="text" class="form-control" id="first_name" name="first_name">
+        </div>
+
+        <div class="form-group">
+            <label for="middle_name">Middle Name:</label>
+            <input type="text" class="form-control" id="middle_name" name="middle_name">
+        </div>
+
+        <div class="form-group">
+            <label for="last_name">Last Name:</label>
+            <input type="text" class="form-control" id="last_name" name="last_name">
+        </div>
+
+        <div class="form-group">
+            <label for="date_of_birth">Date of Birth:</label>
+            <input type="date" class="form-control" id="date_of_birth" name="date_of_birth">
+        </div>
+
+        <div class="form-group">
+            <label for="place_of_birth">Place of Birth:</label>
+            <select class="form-control" id="place_of_birth" name="place_of_birth">
+                <option value="option1">Option 1</option>
+                <!-- Add more options here -->
+                <option value="option8">Option 8</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="hospital_of_birth">Hospital of Birth:</label>
+            <select class="form-control" id="hospital_of_birth" name="hospital_of_birth">
+                <option value="hospital1">Hospital 1</option>
+                <!-- Add more options here -->
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="sex">Sex:</label>
+            <select class="form-control" id="sex" name="sex">
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <!-- Add more options if necessary -->
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="id_code">ID Code (Last 4 Digits):</label>
+            <input type="text" class="form-control" id="id_code" name="id_code" maxlength="4">
+        </div>
+
+        <button type="submit" class="btn btn-primary" name="action" value="start_search">Start Search</button>
+        <button type="submit" class="btn btn-secondary" name="action" value="stop_search">Stop Search</button>
+    </form>
+</div>
+
+<!-- Bootstrap JS, Popper.js, and jQuery -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
