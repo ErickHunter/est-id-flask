@@ -1,0 +1,27 @@
+# Digital identity card, ESTEID, EE
+dn: o=Digital identity card,dc=ESTEID,c=EE
+
+# Diplomatic identity card, ESTEID, EE
+dn: o=Diplomatic identity card,dc=ESTEID,c=EE
+
+# Identity card of Estonian citizen, ESTEID, EE
+dn: o=Identity card of Estonian citizen,dc=ESTEID,c=EE
+
+# Digital identity card of e-resident, ESTEID, EE
+dn: o=Digital identity card of e-resident,dc=ESTEID,c=EE
+
+# Residence card of long-term resident, ESTEID, EE
+dn: o=Residence card of long-term resident,dc=ESTEID,c=EE
+
+# Identity card of European Union citizen, ESTEID, EE
+dn: o=Identity card of European Union citizen,dc=ESTEID,c=EE
+
+# Residence card of temporary residence citizen, ESTEID, EE
+dn: o=Residence card of temporary residence citizen,dc=ESTEID,c=EE
+
+# Residence card of family members of citizen of European Union, ESTEID, EE
+dn: o=Residence card of family members of citizen of European Union,dc=ESTEID,
+ c=EE
+
+# Mobile-ID, ESTEID, EE
+dn: o=Mobile-ID,dc=ESTEID,c=EE
