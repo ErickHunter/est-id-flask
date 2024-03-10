@@ -1,12 +1,9 @@
 from flask import Flask, render_template, request, jsonify
-from ldap3 import Server, Connection, ALL, Tls
+from ldap3 import Server, Connection, Tls
 import ssl
 
 
 app = Flask(__name__)
-
-# Global array to store the digits of the Estonian ID code
-id_code = [None] * 10
 
 
 # Function to determine the first digit of the Estonian ID code
@@ -32,55 +29,98 @@ def determine_first_digit(sex, year):
     return None
 
 
+def calculate_control_code(id_code_digits):
+    # Define Level I and Level II weights
+    level_1_weights = [1, 2, 3, 4, 5, 6, 7, 8, 9, 1]
+    level_2_weights = [3, 4, 5, 6, 7, 8, 9, 1, 2, 3]
+
+    # Calculate sum of products Level I
+    sum_level_1 = sum(id_code_digit * weight for id_code_digit, weight in zip(id_code_digits, level_1_weights))
+    remainder_level_1 = sum_level_1 % 11
+
+    if remainder_level_1 < 10:
+        return remainder_level_1  # Control number found with Level I weights
+
+    # Calculate sum of products Level II if remainder from Level I is 10
+    sum_level_2 = sum(id_code_digit * weight for id_code_digit, weight in zip(id_code_digits, level_2_weights))
+    remainder_level_2 = sum_level_2 % 11
+
+    if remainder_level_2 < 10:
+        return remainder_level_2  # Control number found with Level II
+
+    # Remainder from Level II is also 10, control number is 0
+    return 0
+
+
 def query_ldap_by_id_code(organization, id_code):
-    # Define the LDAP server
+    # LDAP server address
     server_url = 'ldaps://esteid.ldap.sk.ee:636'
 
-    # Adjust the base DN to include the organization component
-    print("org is!!!")
-    print(organization)
+    # Base DN organization component
     base_dn = f"o={organization},dc=ESTEID,c=EE"
 
-    # Construct the search filter using the provided ID code
+    # Search filter using provided ID code
     query_filter = f"(serialNumber=PNOEE-{id_code})"
-    print("ID code is!!!")
-    print(id_code)
+
     # Setup LDAP connection without CA certificate verification
     tls_configuration = Tls(validate=ssl.CERT_NONE, version=ssl.PROTOCOL_TLS_CLIENT)
     server = Server(server_url, use_ssl=True, tls=tls_configuration)
+    search_results = []  # Initialize an empty list to store search results
 
     try:
-        # Connect to the server using anonymous bind
+        # Connect to the server, anonymous bind
         with Connection(server, auto_bind=True) as conn:
-            # Perform the search with the provided filter
             conn.search(base_dn, query_filter, attributes=['*'])
-            # Process the search results
             if conn.entries:
                 for entry in conn.entries:
-                    print(entry)
-                    # Further processing can be done as needed
+                    # Skip the loop iteration if the entry is None
+                    if entry is None:
+                        continue
+                    # Convert each entry to a dictionary and add to the results list
+                    cn_value = entry.entry_attributes_as_dict['cn'][0]
+                    search_results.append(cn_value)
             else:
                 print("No entries found.")
     except Exception as e:
         print(f"An error occurred: {e}")
 
+    return search_results
 
-def populate_id_code(sex, date_of_birth, serial, control_code):
-    year, month, day = map(int, date_of_birth.split('-'))
+
+def generate_estonian_id_code(sex, date_of_birth, serial):
+    # Determine first digit
+    year = int(date_of_birth[:4])
     first_digit = determine_first_digit(sex, year)
-    id_code[0] = first_digit
-    id_code[1:3] = date_of_birth[2:4]  # YY from YYYY-MM-DD
-    id_code[3:5] = date_of_birth[5:7]  # MM
-    id_code[5:7] = date_of_birth[8:10] # DD
-    id_code[7:9] = list(serial)
-    id_code[10:] = list(control_code)
+
+    # Populate first 10 digits of ID code
+    year_short = date_of_birth[2:4]
+    month = date_of_birth[5:7]
+    day = date_of_birth[8:10]
+    initial_id_code_str = f"{first_digit}{year_short}{month}{day}{serial}"
+
+    # Calculate control code
+    initial_id_code_digits = [int(digit) for digit in initial_id_code_str]
+    control_code = calculate_control_code(initial_id_code_digits)
+
+    # Form complete ID code
+    complete_id_code = f"{initial_id_code_str}{control_code}"
+
+    return complete_id_code
 
 
-
-
-@app.route('/')
-def form():
+@app.route('/est-id-search')
+def home():
     return render_template('ldap-form.html')
+
+
+@app.route('/search')
+def form1():
+    return render_template('ldap-form.html')
+
+
+@app.route('/search-range')
+def form2():
+    return render_template('ldap-form-range.html')
 
 
 @app.route('/search', methods=['POST'])
@@ -90,20 +130,38 @@ def search():
         date_of_birth = request.form['date_of_birth']
         sex = request.form['sex']
         serial = request.form['serial']
-        control_code = request.form['control_code']
 
-        populate_id_code(sex, date_of_birth, serial, control_code)
+        print(generate_estonian_id_code(sex, date_of_birth, serial))
+        complete_id_code = generate_estonian_id_code(sex, date_of_birth, serial)
 
-        id_code_str = ''.join(str(digit) for digit in id_code)
-        id_code_int = int(id_code_str)
-
-        # Perform LDAP search and get the response
-        search_results = query_ldap_by_id_code(code_type, id_code_int)
+        # Start a LDAP search
+        search_results = query_ldap_by_id_code(code_type, complete_id_code)
         print(search_results)
-        # Return the search results as JSON
+        # Flask return search results as JSON
         return jsonify(search_results)
 
 
+@app.route('/search-range', methods=['POST'])
+def search_range():
+    if request.form['action'] == 'start_search':
+        code_type = request.form['code_type']
+        sex = request.form['sex']
+        date_of_birth = request.form['date_of_birth']
+        serial_start = int(request.form['serial_start'])
+        serial_end = int(request.form['serial_end'])
+
+        results = []
+        for serial in range(serial_start, serial_end + 1):
+            serial_str = f"{serial:03}"  # Format serial number as a zero-padded string
+            complete_id_code = generate_estonian_id_code(sex, date_of_birth, serial_str)
+            search_results = query_ldap_by_id_code(code_type, complete_id_code)
+            if search_results:
+                results.extend(search_results)
+
+        # Return the combined search results as JSON
+        return jsonify(results)
+
+    return "Invalid form submission", 400
 
 
 if __name__ == '__main__':

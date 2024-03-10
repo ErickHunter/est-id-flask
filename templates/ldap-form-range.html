@@ -20,7 +20,6 @@
 
 <div class="container form-container">
     <h2 class="mb-4">LDAP Search Form</h2>
-    <form action="/search" method="post">
 
         <div class="form-group">
             <label for="code_type">code_type:</label>
@@ -47,9 +46,15 @@
         </div>
 
         <div class="form-group">
-            <label for="serial">ID Code Serial Number (the 3 xxxxxxx???x Digits):</label>
-            <input type="text" class="form-control" id="serial" name="serial" maxlength="3">
+            <label for="serial_start">ID Code Serial Range Start (the 3 xxxxxxx???x Digits):</label>
+            <input type="number" class="form-control" id="serial_start" name="serial_start" min="0" max="999" placeholder="Start">
         </div>
+
+        <div class="form-group">
+            <label for="serial_end">ID Code Serial Range End (the 3 xxxxxxx???x Digits):</label>
+            <input type="number" class="form-control" id="serial_end" name="serial_end" min="0" max="999" placeholder="End">
+        </div>
+
 
 
         <button type="submit" class="btn btn-primary" name="action" value="start_search">Start Search</button>
