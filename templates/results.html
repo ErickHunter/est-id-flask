@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Results</title>
+    <style>
+        ul#results {
+            list-style-type: none;
+            padding: 0;
+        }
+        ul#results li {
+            background-color: #f0f0f0;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Search Results</h1>
+    <ul id="results"></ul>
+
+
+    <script>
+    document.addEventListener('DOMContentLoaded', (event) => {
+        var results = {{ results|tojson|safe }};
+        var uniqueResults = [...new Set(results)]; // Convert results to a Set, then back to an array
+        var resultsList = document.getElementById('results');
+
+        uniqueResults.forEach(function(result) {
+            var listItem = document.createElement('li');
+            listItem.textContent = result;
+            resultsList.appendChild(listItem);
+        });
+    });
+    </script>
+
+</body>
+</html>

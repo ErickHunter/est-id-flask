@@ -1,12 +1,23 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request
+from flask_basicauth import BasicAuth
 from ldap3 import Server, Connection, Tls
 import ssl
+from flask_wtf.csrf import CSRFProtect
+from flask_wtf import FlaskForm
+from wtforms import StringField, DateField, SelectField, SubmitField
+from wtforms.validators import DataRequired
 
 
 app = Flask(__name__)
 
+csrf = CSRFProtect(app)
+app.config['SECRET_KEY'] = 'some super secret key plz change me'  # use secrets
 
-# Function to determine the first digit of the Estonian ID code
+app.config['BASIC_AUTH_USERNAME'] = 'john'  # use secrets
+app.config['BASIC_AUTH_PASSWORD'] = 'matrix'  # use secrets
+basic_auth = BasicAuth(app)
+
+
 def determine_first_digit(sex, year):
     if sex == 'male':
         if 1800 <= year <= 1899:
@@ -56,27 +67,27 @@ def query_ldap_by_id_code(organization, id_code):
     # LDAP server address
     server_url = 'ldaps://esteid.ldap.sk.ee:636'
 
-    # Base DN organization component
+    # Base DN
     base_dn = f"o={organization},dc=ESTEID,c=EE"
 
-    # Search filter using provided ID code
+    # Search filter using ID code
     query_filter = f"(serialNumber=PNOEE-{id_code})"
 
     # Setup LDAP connection without CA certificate verification
     tls_configuration = Tls(validate=ssl.CERT_NONE, version=ssl.PROTOCOL_TLS_CLIENT)
     server = Server(server_url, use_ssl=True, tls=tls_configuration)
-    search_results = []  # Initialize an empty list to store search results
+    search_results = []  # Init empty list for search results
 
     try:
-        # Connect to the server, anonymous bind
+        # Connect to the server
         with Connection(server, auto_bind=True) as conn:
             conn.search(base_dn, query_filter, attributes=['*'])
             if conn.entries:
                 for entry in conn.entries:
-                    # Skip the loop iteration if the entry is None
+                    # Skip if the entry is None
                     if entry is None:
                         continue
-                    # Convert each entry to a dictionary and add to the results list
+                    # Convert entry to a dictionary and add to the results list
                     cn_value = entry.entry_attributes_as_dict['cn'][0]
                     search_results.append(cn_value)
             else:
@@ -89,79 +100,101 @@ def query_ldap_by_id_code(organization, id_code):
 
 def generate_estonian_id_code(sex, date_of_birth, serial):
     # Determine first digit
-    year = int(date_of_birth[:4])
+    year = date_of_birth.year
     first_digit = determine_first_digit(sex, year)
 
     # Populate first 10 digits of ID code
-    year_short = date_of_birth[2:4]
-    month = date_of_birth[5:7]
-    day = date_of_birth[8:10]
+    year_short = str(year)[2:]
+    month = date_of_birth.strftime("%m")
+    day = date_of_birth.strftime("%d")
     initial_id_code_str = f"{first_digit}{year_short}{month}{day}{serial}"
 
     # Calculate control code
     initial_id_code_digits = [int(digit) for digit in initial_id_code_str]
     control_code = calculate_control_code(initial_id_code_digits)
 
-    # Form complete ID code
+    # Complete ID code
     complete_id_code = f"{initial_id_code_str}{control_code}"
 
     return complete_id_code
 
 
-@app.route('/est-id-search')
+class SearchForm(FlaskForm):
+    code_type = SelectField('Code Type', choices=[('Identity card of Estonian citizen', 'Estonian citizen'), ('Residence card of temporary residence citizen', 'temporary resident'), ('Residence card of temporary residence citizen', 'long-term resident')], validators=[DataRequired()])
+    date_of_birth = DateField('Date of Birth', format='%Y-%m-%d', validators=[DataRequired()])
+    sex = SelectField('Sex', choices=[('male', 'Male'), ('female', 'Female')], validators=[DataRequired()])
+    serial = StringField('Serial', validators=[DataRequired()])
+    submit = SubmitField('Search')
+
+
+class SearchRangeForm(FlaskForm):
+    code_type = SelectField('Code Type', choices=[('Identity card of Estonian citizen', 'Estonian citizen'), ('Residence card of temporary residence citizen', 'temporary resident'), ('Residence card of temporary residence citizen', 'long-term resident')], validators=[DataRequired()])
+    date_of_birth = DateField('Date of Birth', format='%Y-%m-%d', validators=[DataRequired()])
+    sex = SelectField('Sex', choices=[('male', 'Male'), ('female', 'Female')], validators=[DataRequired()])
+    serial_start = StringField('Serial Start', validators=[DataRequired()])
+    serial_end = StringField('Serial End', validators=[DataRequired()])
+    submit = SubmitField('Search')
+
+
+@app.before_request
+def before_request():
+    if request.method in ['POST', 'PUT', 'DELETE']:
+        csrf.protect()
+
+
+@app.route('/')
 def home():
-    return render_template('ldap-form.html')
+    form_buttons = [
+        {'label': 'Search', 'route': '/search'},
+        {'label': 'Search in Range', 'route': '/search-range'}
+    ]
+    return render_template('home.html', form_buttons=form_buttons)
 
 
-@app.route('/search')
+@app.route('/search', methods=['GET', 'POST'])
 def form1():
-    return render_template('ldap-form.html')
+    form = SearchForm()
+    if form.validate_on_submit():
+        code_type = form.code_type.data
+        date_of_birth = form.date_of_birth.data
+        sex = form.sex.data
+        serial = form.serial.data
 
-
-@app.route('/search-range')
-def form2():
-    return render_template('ldap-form-range.html')
-
-
-@app.route('/search', methods=['POST'])
-def search():
-    if request.form['action'] == 'start_search':
-        code_type = request.form['code_type']
-        date_of_birth = request.form['date_of_birth']
-        sex = request.form['sex']
-        serial = request.form['serial']
-
-        print(generate_estonian_id_code(sex, date_of_birth, serial))
         complete_id_code = generate_estonian_id_code(sex, date_of_birth, serial)
-
-        # Start a LDAP search
         search_results = query_ldap_by_id_code(code_type, complete_id_code)
-        print(search_results)
-        # Flask return search results as JSON
-        return jsonify(search_results)
+        return render_template('results.html', results=search_results)
+    else:
+        return render_template('ldap-form.html', form=form)
 
 
-@app.route('/search-range', methods=['POST'])
-def search_range():
-    if request.form['action'] == 'start_search':
-        code_type = request.form['code_type']
-        sex = request.form['sex']
-        date_of_birth = request.form['date_of_birth']
-        serial_start = int(request.form['serial_start'])
-        serial_end = int(request.form['serial_end'])
+@app.route('/search-range', methods=['GET', 'POST'])
+@basic_auth.required
+def form2():
+    form = SearchRangeForm()
+    if form.validate_on_submit():
+        code_type = form.code_type.data
+        date_of_birth = form.date_of_birth.data
+        sex = form.sex.data
+        serial_start = int(form.serial_start.data)
+        serial_end = int(form.serial_end.data)
 
         results = []
         for serial in range(serial_start, serial_end + 1):
-            serial_str = f"{serial:03}"  # Format serial number as a zero-padded string
+            serial_str = f"{serial:03}"
             complete_id_code = generate_estonian_id_code(sex, date_of_birth, serial_str)
             search_results = query_ldap_by_id_code(code_type, complete_id_code)
             if search_results:
                 results.extend(search_results)
 
-        # Return the combined search results as JSON
-        return jsonify(results)
+        return render_template('results.html', results=results)
+    else:
+        return render_template('ldap-form-range.html', form=form)
 
-    return "Invalid form submission", 400
+
+@app.after_request
+def after_request(response):
+    response.headers["Content-Type"] = "text/html; charset=utf-8"
+    return response
 
 
 if __name__ == '__main__':
