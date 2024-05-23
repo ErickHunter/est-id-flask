@@ -1,3 +1,4 @@
+import os
 from flask import Flask, render_template, request
 from flask_basicauth import BasicAuth
 from ldap3 import Server, Connection, Tls
@@ -11,11 +12,16 @@ from wtforms.validators import DataRequired
 app = Flask(__name__)
 
 csrf = CSRFProtect(app)
-app.config['SECRET_KEY'] = 'some super secret key plz change me'  # use secrets
+# app.config['SECRET_KEY'] = 'some super secret key plz change me'  # use secrets
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 
-app.config['BASIC_AUTH_USERNAME'] = 'john'  # use secrets
-app.config['BASIC_AUTH_PASSWORD'] = 'matrix'  # use secrets
+app.config['BASIC_AUTH_USERNAME'] = os.getenv('BASIC_AUTH_USERNAME')
+app.config['BASIC_AUTH_PASSWORD'] = os.getenv('BASIC_AUTH_PASSWORD')
 basic_auth = BasicAuth(app)
+
+# app.config['BASIC_AUTH_USERNAME'] = 'john'  # use secrets
+# app.config['BASIC_AUTH_PASSWORD'] = 'matrix'  # use secrets
+#basic_auth = BasicAuth(app)
 
 
 def determine_first_digit(sex, year):
